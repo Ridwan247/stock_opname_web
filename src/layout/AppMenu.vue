@@ -59,10 +59,16 @@ const model = ref([
     label: "Master",
     items: [
       {
+        label: "Dashboard",
+        icon: "pi pi-fw pi-home",
+        to: "/dashboard",
+      },
+      {
         label: "Master Data",
         icon: "pi pi-fw pi-server",
         to: "/master-data",
-      },
+      }
+
     ],
   },
   {
@@ -73,6 +79,7 @@ const model = ref([
         icon: "pi pi-fw pi-sync",
         to: "/",
       },
+
     ],
   },
   {

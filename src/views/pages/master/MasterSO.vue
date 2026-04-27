@@ -6,23 +6,13 @@
     <div class="flex gap-3 mt-4">
       <InputGroup>
         <FloatLabel>
-          <Calendar
-            v-model="tglHeadSo"
-            :disabled="isDisabledTglHeadSo"
-            inputId="tglHeadSO"
-            :maxDate="new Date()"
-          />
+          <Calendar v-model="tglHeadSo" :disabled="isDisabledTglHeadSo" inputId="tglHeadSO" :maxDate="new Date()" />
           <label for="tglHeadSO">Tanggal Head SO</label>
         </FloatLabel>
       </InputGroup>
 
       <InputGroup class="w-auto">
-        <Button
-          label="Request"
-          :disabled="isDisabledHead"
-          :loading="loadingRequestHeadSo"
-          @click="addHeadSo"
-        />
+        <Button label="Request" :disabled="isDisabledHead" :loading="loadingRequestHeadSo" @click="addHeadSo" />
       </InputGroup>
     </div>
 
@@ -43,23 +33,13 @@
 
       <InputGroup>
         <FloatLabel>
-          <InputText
-            placeholder="Kode SO"
-            v-model="cabangSo"
-            inputId="cabangSO"
-            disabled
-          />
+          <InputText placeholder="Kode SO" v-model="cabangSo" inputId="cabangSO" disabled />
           <label for="cabangSO">Cabang</label>
         </FloatLabel>
       </InputGroup>
 
       <InputGroup class="w-auto">
-        <Button
-          @click="simpanDataSo"
-          :disabled="isDisabledDataSo"
-          :loading="loadingSimpanDataSo"
-          label="Simpan"
-        />
+        <Button @click="simpanDataSo" :disabled="isDisabledDataSo" :loading="loadingSimpanDataSo" label="Simpan" />
       </InputGroup>
     </div>
 
@@ -83,21 +63,9 @@
     </div>
 
     <div v-if="showTableDataSo" class="mt-5">
-      <DataTable
-        v-model:filters="filters"
-        :value="masterSO"
-        resizableColumns
-        columnResizeMode="fit"
-        showGridlines
-        tableStyle="min-width: 50rem"
-        paginator
-        :rows="10"
-        :rowsPerPageOptions="[10, 20, 50]"
-        filterDisplay="menu"
-        removableSort
-        stripedRows
-        :loading="loadingDataSo"
-      >
+      <DataTable v-model:filters="filters" :value="masterSO" resizableColumns columnResizeMode="fit" showGridlines
+        tableStyle="min-width: 50rem" paginator :rows="10" :rowsPerPageOptions="[10, 20, 50]" filterDisplay="menu"
+        removableSort stripedRows :loading="loadingDataSo">
         <template #header>
           <IconField iconPosition="left">
             <InputIcon>
@@ -133,6 +101,7 @@
 .load-wrapp p {
   padding: 0 0 20px;
 }
+
 .load-wrapp:last-child {
   margin-right: 0;
 }
@@ -153,30 +122,39 @@
 .l-1 {
   animation-delay: 0.48s;
 }
+
 .l-2 {
   animation-delay: 0.6s;
 }
+
 .l-3 {
   animation-delay: 0.72s;
 }
+
 .l-4 {
   animation-delay: 0.84s;
 }
+
 .l-5 {
   animation-delay: 0.96s;
 }
+
 .l-6 {
   animation-delay: 1.08s;
 }
+
 .l-7 {
   animation-delay: 1.2s;
 }
+
 .l-8 {
   animation-delay: 1.32s;
 }
+
 .l-9 {
   animation-delay: 1.44s;
 }
+
 .l-10 {
   animation-delay: 1.56s;
 }
@@ -185,6 +163,7 @@
   0% {
     opacity: 0;
   }
+
   100% {
     opacity: 1;
   }
@@ -347,11 +326,11 @@ export default {
               this.loadingBeforeTableShow = false;
               this.masterSO = dataSo.data.data
                 ? dataSo.data.data.map((item, index) => {
-                    return {
-                      no: index + 1,
-                      ...item,
-                    };
-                  })
+                  return {
+                    no: index + 1,
+                    ...item,
+                  };
+                })
                 : [];
             })
             .catch((errDataSo) => {
