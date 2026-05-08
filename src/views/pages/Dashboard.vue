@@ -12,6 +12,8 @@
             <div class="header-right">
                 <Calendar v-model="tanggal" dateFormat="yy-mm-dd" placeholder="Pilih Tanggal" :showIcon="true"
                     class="date-picker" />
+                <Dropdown v-model="selectedSO" :options="listSO" optionLabel="kodeso" optionValue="kodeso"
+                    placeholder="Pilih Kode SO" class="so-dropdown" />
                 <Button label="Cari" icon="pi pi-search" @click="fetchDashboard" :loading="loading"
                     class="p-button-info search-btn" />
             </div>
@@ -40,7 +42,10 @@
 
         <!-- Dashboard Data -->
         <div v-else class="dashboard-content">
-
+            <div class="flex justify-content-end mb-3">
+                <Button label="Export Excel" icon="pi pi-file-excel" severity="success" @click="exportExcel"
+                    :disabled="!data" />
+            </div>
             <!-- Info SO -->
             <div class="section-title">
                 <i class="pi pi-info-circle"></i> Informasi Stock Opname
@@ -205,15 +210,20 @@ import Calendar from 'primevue/calendar';
 import Tag from 'primevue/tag';
 import ProgressBar from 'primevue/progressbar';
 import Skeleton from 'primevue/skeleton';
+import Dropdown from 'primevue/dropdown';
+import * as XLSX from 'xlsx-js-style';
+import { saveAs } from 'file-saver';
 
 export default {
     name: 'Dashboard',
-    components: { Button, Calendar, Tag, ProgressBar, Skeleton },
+    components: { Button, Calendar, Tag, ProgressBar, Skeleton, Dropdown },
     setup() {
         const tanggal = ref(null);
         const data = ref(null);
         const loading = ref(false);
         const error = ref(null);
+        // const selectedSO = ref(null);#############################################################################################################
+        // const listSO = ref([]);
 
         // Ambil kode cabang dari localStorage (sama persis dengan loginStore)
         const getDecryptCabang = () => {
@@ -252,7 +262,126 @@ export default {
             const day = String(d.getDate()).padStart(2, '0');
             return `${y}-${m}-${day}`;
         };
+        // const fetchKodeSO = async () => {);#############################################################################################################
+        //     if (!tanggal.value) return;
 
+        //     try {
+        //         const token = getToken();
+
+        //         const response = await axios.post(
+        //             'https://apipod.lariscargo.co.id/api/so/list',
+        //             {
+        //                 kode_cabang: kodeCabang.value,
+        //                 tanggal: formatTanggal(tanggal.value)
+        //             },
+        //             {
+        //                 headers: {
+        //                     Authorization: `Bearer ${token}`,
+        //                     'Content-Type': 'application/json'
+        //                 }
+        //             }
+        //         );
+
+        //         if (response.data.status) {
+        //             listSO.value = response.data.data;
+        //         } else {
+        //             listSO.value = [];
+        //         }
+        //     } catch (err) {
+        //         listSO.value = [];
+        //     }
+        // };
+        const exportExcel = () => {
+            if (!data.value) return;
+
+            const exportData = [
+                {
+                    "Kode SO": data.value.info_so.kodeso,
+                    "Tanggal SO": formatDate(data.value.info_so.tanggalso),
+                    "Cabang": data.value.info_so.cabangso,
+                    "Dibuat Oleh": data.value.info_so.created_by,
+                    "Status": data.value.info_so.status,
+
+                    "Progress Scan": data.value.progres_scan,
+
+                    "Master SO Koli": data.value.master_so.total_koli,
+                    "Master SO Kilo": data.value.master_so.total_kilo,
+
+                    "Hasil Scan Koli": data.value.hasil_scan.total_koli,
+                    "Hasil Scan Kilo": data.value.hasil_scan.total_kilo,
+
+                    "Match Koli": data.value.rekonsiliasi.match.total_koli,
+                    "Match Kilo": data.value.rekonsiliasi.match.total_kilo,
+
+                    "Belum Scan Koli": data.value.rekonsiliasi.belum_scan.total_koli,
+                    "Belum Scan Kilo": data.value.rekonsiliasi.belum_scan.total_kilo,
+
+                    "Lebih Koli": data.value.rekonsiliasi.lebih.total_koli,
+                    "Lebih Kilo": data.value.rekonsiliasi.lebih.total_kilo,
+                }
+            ];
+
+            const worksheet = XLSX.utils.json_to_sheet(exportData);
+
+            // auto width
+            worksheet["!cols"] = Object.keys(exportData[0]).map((key) => ({
+                wch: key.length + 10
+            }));
+
+            // border
+            const range = XLSX.utils.decode_range(worksheet["!ref"]);
+
+            for (let R = range.s.r; R <= range.e.r; ++R) {
+                for (let C = range.s.c; C <= range.e.c; ++C) {
+
+                    const cellAddress = XLSX.utils.encode_cell({
+                        r: R,
+                        c: C
+                    });
+
+                    if (!worksheet[cellAddress]) continue;
+
+                    worksheet[cellAddress].s = {
+                        border: {
+                            top: { style: "thin", color: { rgb: "000000" } },
+                            bottom: { style: "thin", color: { rgb: "000000" } },
+                            left: { style: "thin", color: { rgb: "000000" } },
+                            right: { style: "thin", color: { rgb: "000000" } },
+                        }
+                    };
+
+                    // header bold
+                    if (R === 0) {
+                        worksheet[cellAddress].s.font = {
+                            bold: true
+                        };
+                    }
+                }
+            }
+
+            const workbook = XLSX.utils.book_new();
+
+            XLSX.utils.book_append_sheet(
+                workbook,
+                worksheet,
+                "Dashboard"
+            );
+
+            const excelBuffer = XLSX.write(workbook, {
+                bookType: "xlsx",
+                type: "array"
+            });
+
+            const fileData = new Blob([excelBuffer], {
+                type:
+                    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;charset=UTF-8"
+            });
+
+            saveAs(
+                fileData,
+                `DASHBOARD_SO_${formatTanggal(tanggal.value)}.xlsx`
+            );
+        };
         const fetchDashboard = async () => {
             if (!tanggal.value) {
                 error.value = 'Pilih tanggal terlebih dahulu.';
@@ -270,6 +399,7 @@ export default {
                     {
                         kode_cabang: kodeCabang.value,
                         tanggal: formatTanggal(tanggal.value)
+                        // kode_so: selectedSO.value);#############################################################################################################
                     },
                     {
                         headers: {
@@ -297,6 +427,7 @@ export default {
         onMounted(() => {
             tanggal.value = new Date();
             fetchDashboard();
+            // fetchKodeSO();#############################################################################################################
         });
 
         return {
@@ -305,6 +436,10 @@ export default {
             loading,
             error,
             kodeCabang,
+            // selectedSO,);#############################################################################################################
+            // listSO,
+            // fetchKodeSO,
+            exportExcel,
             fetchDashboard,
             formatDate,
             formatNumber
