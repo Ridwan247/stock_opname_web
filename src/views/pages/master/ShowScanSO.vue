@@ -39,7 +39,7 @@
         <Column sortable field="tanggalresi" header="Tanggal Resi"> </Column>
         <Column sortable field="kodeidkoli" header="ID Koli"> </Column>
         <Column sortable field="koli" header="Koli"> </Column>
-        <Column sortable field="kilo" header="Koli"> </Column>
+        <Column sortable field="kilo" header="Kilo"> </Column>
         <Column sortable field="kodepengiriman" header="Kode Pengiriman"> </Column>
         <Column sortable field="keterangan" header="Keterangan"> </Column>
       </DataTable>

@@ -247,7 +247,7 @@ export default {
 
           this.loadingTableMasterSO = false;
           this.loadingCariDataSO = false;
-          this.this.dataSO = [];
+          this.dataSO = [];
         });
     },
     search(event) {

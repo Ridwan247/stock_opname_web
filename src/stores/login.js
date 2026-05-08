@@ -72,15 +72,11 @@ export const useLoginStore = defineStore('login', {
             }
         },
         startIntervalSession() {
+            if (this.intervalId) clearInterval(this.intervalId);
             this.intervalId = setInterval(() => {
-                localStorage.removeItem('DataA');
-                localStorage.removeItem('DataB');
-                localStorage.removeItem('DataC');
-                localStorage.removeItem('DataD');
-                localStorage.removeItem('DataE');
-                localStorage.removeItem('DataF');
-                localStorage.removeItem('DataG');
-            }, 24 * 60 * 60 * 1000); // Remove item every 24 hours
+                this.removeIntervalSession();
+                window.location.reload();
+            }, 4 * 60 * 60 * 1000); // Remove item every 4 hours
         },
         removeIntervalSession() {
             clearInterval(this.intervalId);
