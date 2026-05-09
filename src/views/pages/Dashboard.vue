@@ -11,8 +11,8 @@
             </div>
             <div class="header-right">
                 <Calendar v-model="tanggal" dateFormat="yy-mm-dd" placeholder="Pilih Tanggal" :showIcon="true"
-                    class="date-picker" />
-                <Dropdown v-model="selectedSO" :options="listSO" optionLabel="kodeso" optionValue="kodeso"
+                    class="date-picker" @date-select="onTanggalChange" />
+                <Dropdown v-model="selectedSO" :options="kodeso" optionLabel="kodeso" optionValue="kodeso"
                     placeholder="Pilih Kode SO" class="so-dropdown" />
                 <Button label="Cari" icon="pi pi-search" @click="fetchDashboard" :loading="loading"
                     class="p-button-info search-btn" />
@@ -201,7 +201,7 @@
 </template>
 
 <script>
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, watch } from 'vue';
 import axios from 'axios';
 import AES from 'crypto-js/aes';
 import Utf8 from 'crypto-js/enc-utf8';
@@ -222,10 +222,9 @@ export default {
         const data = ref(null);
         const loading = ref(false);
         const error = ref(null);
-        // const selectedSO = ref(null);#############################################################################################################
-        // const listSO = ref([]);
+        const selectedSO = ref(null);
+        const kodeso = ref([]);
 
-        // Ambil kode cabang dari localStorage (sama persis dengan loginStore)
         const getDecryptCabang = () => {
             const encryptedGet = localStorage.getItem('DataG');
             return encryptedGet
@@ -262,35 +261,54 @@ export default {
             const day = String(d.getDate()).padStart(2, '0');
             return `${y}-${m}-${day}`;
         };
-        // const fetchKodeSO = async () => {);#############################################################################################################
-        //     if (!tanggal.value) return;
 
-        //     try {
-        //         const token = getToken();
+        const fetchKodeSO = async () => {
+            if (!tanggal.value) return;
 
-        //         const response = await axios.post(
-        //             'https://apipod.lariscargo.co.id/api/so/list',
-        //             {
-        //                 kode_cabang: kodeCabang.value,
-        //                 tanggal: formatTanggal(tanggal.value)
-        //             },
-        //             {
-        //                 headers: {
-        //                     Authorization: `Bearer ${token}`,
-        //                     'Content-Type': 'application/json'
-        //                 }
-        //             }
-        //         );
+            try {
+                const token = getToken();
+                const formData = new FormData();
+                formData.append('kode_cabang', kodeCabang.value);
+                formData.append('tanggal', formatTanggal(tanggal.value));
 
-        //         if (response.data.status) {
-        //             listSO.value = response.data.data;
-        //         } else {
-        //             listSO.value = [];
-        //         }
-        //     } catch (err) {
-        //         listSO.value = [];
-        //     }
-        // };
+                const response = await axios.post(
+                    'https://apipod.lariscargo.co.id/api/get-kode-so-by-tanggal',
+                    formData,
+                    {
+                        headers: {
+                            Authorization: `Bearer ${token}`,
+                            'Content-Type': 'multipart/form-data'
+                        }
+                    }
+                );
+
+                if (response.data.status) {
+                    kodeso.value = response.data.data;
+                } else {
+                    kodeso.value = [];
+                }
+            } catch (err) {
+                console.log(err);
+                kodeso.value = [];
+            }
+        };
+
+        // Dipanggil saat user memilih tanggal dari Calendar
+        const onTanggalChange = () => {
+            selectedSO.value = null;
+            kodeso.value = [];
+            fetchKodeSO();
+        };
+
+        // Watch sebagai fallback jika @date-select tidak cukup
+        watch(tanggal, (newVal) => {
+            if (newVal) {
+                selectedSO.value = null;
+                kodeso.value = [];
+                fetchKodeSO();
+            }
+        });
+
         const exportExcel = () => {
             if (!data.value) return;
 
@@ -301,21 +319,15 @@ export default {
                     "Cabang": data.value.info_so.cabangso,
                     "Dibuat Oleh": data.value.info_so.created_by,
                     "Status": data.value.info_so.status,
-
                     "Progress Scan": data.value.progres_scan,
-
                     "Master SO Koli": data.value.master_so.total_koli,
                     "Master SO Kilo": data.value.master_so.total_kilo,
-
                     "Hasil Scan Koli": data.value.hasil_scan.total_koli,
                     "Hasil Scan Kilo": data.value.hasil_scan.total_kilo,
-
                     "Match Koli": data.value.rekonsiliasi.match.total_koli,
                     "Match Kilo": data.value.rekonsiliasi.match.total_kilo,
-
                     "Belum Scan Koli": data.value.rekonsiliasi.belum_scan.total_koli,
                     "Belum Scan Kilo": data.value.rekonsiliasi.belum_scan.total_kilo,
-
                     "Lebih Koli": data.value.rekonsiliasi.lebih.total_koli,
                     "Lebih Kilo": data.value.rekonsiliasi.lebih.total_kilo,
                 }
@@ -323,22 +335,15 @@ export default {
 
             const worksheet = XLSX.utils.json_to_sheet(exportData);
 
-            // auto width
             worksheet["!cols"] = Object.keys(exportData[0]).map((key) => ({
                 wch: key.length + 10
             }));
 
-            // border
             const range = XLSX.utils.decode_range(worksheet["!ref"]);
 
             for (let R = range.s.r; R <= range.e.r; ++R) {
                 for (let C = range.s.c; C <= range.e.c; ++C) {
-
-                    const cellAddress = XLSX.utils.encode_cell({
-                        r: R,
-                        c: C
-                    });
-
+                    const cellAddress = XLSX.utils.encode_cell({ r: R, c: C });
                     if (!worksheet[cellAddress]) continue;
 
                     worksheet[cellAddress].s = {
@@ -350,22 +355,14 @@ export default {
                         }
                     };
 
-                    // header bold
                     if (R === 0) {
-                        worksheet[cellAddress].s.font = {
-                            bold: true
-                        };
+                        worksheet[cellAddress].s.font = { bold: true };
                     }
                 }
             }
 
             const workbook = XLSX.utils.book_new();
-
-            XLSX.utils.book_append_sheet(
-                workbook,
-                worksheet,
-                "Dashboard"
-            );
+            XLSX.utils.book_append_sheet(workbook, worksheet, "Dashboard");
 
             const excelBuffer = XLSX.write(workbook, {
                 bookType: "xlsx",
@@ -373,15 +370,12 @@ export default {
             });
 
             const fileData = new Blob([excelBuffer], {
-                type:
-                    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;charset=UTF-8"
+                type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;charset=UTF-8"
             });
 
-            saveAs(
-                fileData,
-                `DASHBOARD_SO_${formatTanggal(tanggal.value)}.xlsx`
-            );
+            saveAs(fileData, `DASHBOARD_SO_${formatTanggal(tanggal.value)}.xlsx`);
         };
+
         const fetchDashboard = async () => {
             if (!tanggal.value) {
                 error.value = 'Pilih tanggal terlebih dahulu.';
@@ -398,8 +392,8 @@ export default {
                     'https://apipod.lariscargo.co.id/api/so/dashboard',
                     {
                         kode_cabang: kodeCabang.value,
-                        tanggal: formatTanggal(tanggal.value)
-                        // kode_so: selectedSO.value);#############################################################################################################
+                        tanggal: formatTanggal(tanggal.value),
+                        kodeso: selectedSO.value
                     },
                     {
                         headers: {
@@ -423,11 +417,10 @@ export default {
             }
         };
 
-        // Auto-load hari ini saat komponen mount
         onMounted(() => {
             tanggal.value = new Date();
+            fetchKodeSO();
             fetchDashboard();
-            // fetchKodeSO();#############################################################################################################
         });
 
         return {
@@ -436,9 +429,10 @@ export default {
             loading,
             error,
             kodeCabang,
-            // selectedSO,);#############################################################################################################
-            // listSO,
-            // fetchKodeSO,
+            selectedSO,
+            kodeso,
+            onTanggalChange,
+            fetchKodeSO,
             exportExcel,
             fetchDashboard,
             formatDate,
@@ -447,7 +441,6 @@ export default {
     }
 };
 </script>
-
 <style scoped>
 .dashboard-container {
     padding: 1.5rem;
