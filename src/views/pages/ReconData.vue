@@ -4,73 +4,35 @@
     <template #content>
       <div class="field mt-4">
         <FloatLabel>
-          <Calendar
-            v-model="tglSO"
-            showButtonBar
-            inputId="dateSO"
-            dateFormat="yy/mm/dd"
-            :maxDate="new Date()"
-          />
+          <Calendar v-model="tglSO" showButtonBar inputId="dateSO" dateFormat="yy/mm/dd" :maxDate="new Date()" />
           <label for="dateSO">Tanggal SO</label>
         </FloatLabel>
       </div>
       <div class="field mt-5">
         <FloatLabel>
-          <AutoComplete
-            dropdown
-            v-model="kodeSO"
-            inputId="ac"
-            :suggestions="cariDataSO"
-            :disabled="isDisabledCariSO"
-            @complete="search"
-            :loading="loadingCariDataSO"
-          />
+          <AutoComplete dropdown v-model="kodeSO" inputId="ac" :suggestions="cariDataSO" :disabled="isDisabledCariSO"
+            @complete="search" :loading="loadingCariDataSO" />
           <label for="ac">Cari Kode SO</label>
         </FloatLabel>
       </div>
       <div class="grid">
         <div class="col-4">
-          <Button
-            label="Cari"
-            :disabled="isDisabledCariData"
-            icon="pi pi-search"
-            :loading="loadingCariRecon"
-            @click="cariReconDataSO"
-            severity="info"
-          />
+          <Button label="Cari" :disabled="isDisabledCariData" icon="pi pi-search" :loading="loadingCariRecon"
+            @click="cariReconDataSO" severity="info" />
         </div>
         <div class="col-8 flex justify-content-end flex-wrap">
           <ConfirmPopup></ConfirmPopup>
-          <Button
-            v-if="validateConfirmData"
-            label="Konfirmasi Data"
-            icon="pi pi-check-square"
-            @click="confirmRecon($event)"
-            severity="warning"
-            class="mr-3"
-          />
-          <Button
-            label="Print Data"
-            icon="pi pi-print"
-            :disabled="isDisabledActionData"
-            :loading="loadingPrintRecon"
-            @click="printReconDataSO"
-            severity="help"
-          />
+          <Button v-if="validateConfirmData" label="Konfirmasi Data" icon="pi pi-check-square"
+            @click="confirmRecon($event)" severity="warning" class="mr-3" />
+          <Button label="Print Data" icon="pi pi-print" :disabled="isDisabledActionData" :loading="loadingPrintRecon"
+            @click="printReconDataSO" severity="help" />
+          <!-- tambahkan element select untuk memilih jumlah data yang di print agar tidak timeout jika di print keseluruahn -->
+          <Dropdown v-model="printRows" :options="printOptions" optionLabel="name" optionValue="value" class="ml-3" />
         </div>
       </div>
       <div v-if="showDataRecon" class="card">
-        <DataTable
-          v-model:filters="filters"
-          :value="dataRecon"
-          stripedRows
-          tableStyle="min-width: 50rem"
-          :loading="loadingTable"
-          paginator
-          :rows="10"
-          removableSort
-          :rowsPerPageOptions="[10, 20, 50]"
-        >
+        <DataTable v-model:filters="filters" :value="dataRecon" stripedRows tableStyle="min-width: 50rem"
+          :loading="loadingTable" paginator :rows="10" removableSort :rowsPerPageOptions="[10, 20, 50]">
           <template #header>
             <IconField iconPosition="left">
               <InputIcon>
@@ -117,6 +79,15 @@ import { useLoginStore } from "@/stores/login";
 export default {
   data() {
     return {
+      printRows: 1000,
+      printOptions: [
+        { name: "1-1000", value: "1-1000" },
+        { name: "1001-2000", value: "1001-2000" },
+        { name: "2001-3000", value: "2001-3000" },
+        { name: "3001-4000", value: "3001-4000" },
+        { name: "4001-5000", value: "4001-5000" },
+        { name: "5001-6000", value: "5001-6000" },
+      ],
       kodeSO: "",
       tglSO: "",
       itemsRecon: [],
@@ -241,7 +212,7 @@ export default {
         accept: () => {
           this.konfirmasiDataSO();
         },
-        reject: () => {},
+        reject: () => { },
       });
     },
     konfirmasiDataSO() {
@@ -315,11 +286,11 @@ export default {
 
           this.dataRecon = res.data.data
             ? res.data.data.map((item, index) => {
-                return {
-                  no: index + 1,
-                  ...item,
-                };
-              })
+              return {
+                no: index + 1,
+                ...item,
+              };
+            })
             : [];
           this.loadingTable = false;
         })
@@ -348,6 +319,7 @@ export default {
             kodeso: this.kodeSO,
             tanggal: this.formatDate(this.tglSO),
             kode_cabang: useLoginStore().getDecryptCabang(),
+            print_rows: this.printRows,
           },
           {
             responseType: "blob",
