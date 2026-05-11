@@ -28,45 +28,60 @@
             @click="printReconDataSO" severity="help" />
           <!-- tambahkan element select untuk memilih jumlah data yang di print agar tidak timeout jika di print keseluruahn -->
           <Dropdown v-model="printRows" :options="printOptions" optionLabel="name" optionValue="value" class="ml-3" />
-        </div>
-      </div>
-      <div v-if="showDataRecon" class="card">
-        <DataTable v-model:filters="filters" :value="dataRecon" stripedRows tableStyle="min-width: 50rem"
-          :loading="loadingTable" paginator :rows="10" removableSort :rowsPerPageOptions="[10, 20, 50]">
-          <template #header>
-            <IconField iconPosition="left">
-              <InputIcon>
-                <i class="pi pi-search" />
-              </InputIcon>
-              <InputText v-model="filters['global'].value" placeholder="Search" />
-            </IconField>
-          </template>
-          <Column sortable field="no" header="No"></Column>
-          <Column sortable field="resi" header="Resi"></Column>
-          <Column sortable field="tanggalresi" header="Tanggal Resi"></Column>
-          <Column sortable field="kodeidkoli" header="ID Koli"></Column>
-          <Column sortable field="koli" header="Koli"></Column>
-          <Column sortable field="kilo" header="Kilo"></Column>
-          <Column sortable field="kodepengiriman" header="Kode Pengiriman"></Column>
-          <Column sortable field="kodeso" header="Kode SO"></Column>
-          <Column sortable field="tanggalso" header="Tanggal SO"></Column>
-          <Column sortable field="master_data" header="Master Data">
-            <template #body="slotProps">
-              <span>
-                {{ slotProps.data.master_data == "Y" ? "Yes" : "No" }}
-              </span>
-            </template>
-          </Column>
-          <Column sortable field="tanggal_scan" header="Tanggal Scan"></Column>
-          <Column sortable field="hasil_scan" header="Hasil Scan">
-            <template #body="slotProps">
-              <span>
-                {{ slotProps.data.hasil_scan == "Y" ? "Yes" : "No" }}
-              </span>
-            </template>
-          </Column>
-        </DataTable>
-      </div>
+          <div class="grid align-items-center">
+            <!-- Tombol kiri -->
+            <div class="col-12 md:col-4">
+              <Button label="Cari" :disabled="isDisabledCariData" icon="pi pi-search" :loading="loadingCariRecon"
+                @click="cariReconDataSO" severity="info" />
+            </div>
+            <!-- Tombol kanan -->
+            <div class="col-12 md:col-8 flex justify-content-end gap-2 flex-wrap">
+              <ConfirmPopup />
+              <Button v-if="validateConfirmData" label="Konfirmasi Data" icon="pi pi-check-square"
+                @click="confirmRecon($event)" severity="warning" />
+              <Button label="Print Data" icon="pi pi-print" :disabled="isDisabledActionData"
+                :loading="loadingPrintRecon" @click="printReconDataSO" severity="help" />
+              <Button icon="pi pi-file-excel" label="Export Excel" severity="success" @click="exportExcel" />
+            </div>
+          </div>
+
+          <div v-if="showDataRecon" class="card">
+            <DataTable v-model:filters="filters" :value="dataRecon" stripedRows tableStyle="min-width: 50rem"
+              :loading="loadingTable" paginator :rows="10" removableSort :rowsPerPageOptions="[10, 20, 50]">
+              <template #header>
+                <IconField iconPosition="left">
+                  <InputIcon>
+                    <i class="pi pi-search" />
+                  </InputIcon>
+                  <InputText v-model="filters['global'].value" placeholder="Search" />
+                </IconField>
+              </template>
+              <Column sortable field="no" header="No"></Column>
+              <Column sortable field="resi" header="Resi"></Column>
+              <Column sortable field="tanggalresi" header="Tanggal Resi"></Column>
+              <Column sortable field="kodeidkoli" header="ID Koli"></Column>
+              <Column sortable field="koli" header="Koli"></Column>
+              <Column sortable field="kilo" header="Kilo"></Column>
+              <Column sortable field="kodepengiriman" header="Kode Pengiriman"></Column>
+              <Column sortable field="kodeso" header="Kode SO"></Column>
+              <Column sortable field="tanggalso" header="Tanggal SO"></Column>
+              <Column sortable field="master_data" header="Master Data">
+                <template #body="slotProps">
+                  <span>
+                    {{ slotProps.data.master_data == "Y" ? "Yes" : "No" }}
+                  </span>
+                </template>
+              </Column>
+              <Column sortable field="tanggal_scan" header="Tanggal Scan"></Column>
+              <Column sortable field="hasil_scan" header="Hasil Scan">
+                <template #body="slotProps">
+                  <span>
+                    {{ slotProps.data.hasil_scan == "Y" ? "Yes" : "No" }}
+                  </span>
+                </template>
+              </Column>
+            </DataTable>
+          </div>
     </template>
   </Card>
 </template>
@@ -75,6 +90,8 @@
 import axios from "axios";
 import { FilterMatchMode, FilterOperator } from "primevue/api";
 import { useLoginStore } from "@/stores/login";
+import * as XLSX from "xlsx-js-style";
+import { saveAs } from "file-saver";
 
 export default {
   data() {
@@ -108,6 +125,120 @@ export default {
     this.initFilters();
   },
   methods: {
+    exportExcel() {
+      if (!this.dataRecon || this.dataRecon.length === 0) {
+        this.$toast.add({
+          severity: "warn",
+          summary: "Warning",
+          detail: "Tidak ada data untuk di export",
+          life: 3000,
+        });
+
+        return;
+      }
+
+      // ambil semua column dari DataTable
+      const columns = this.$refs.dt.columns;
+
+      // ambil field & header otomatis
+      const columnData = columns.map((col) => ({
+        field: col.props.field,
+        header: col.props.header,
+      }));
+
+      // ambil data sesuai column table
+      const exportData = this.dataRecon.map((item) => {
+        const row = {};
+
+        columnData.forEach((col) => {
+          row[col.header] = item[col.field];
+        });
+
+        return row;
+      });
+
+      // buat worksheet
+      const worksheet = XLSX.utils.json_to_sheet(exportData);
+
+      // auto width column
+      worksheet["!cols"] = columnData.map((col) => ({
+        wch: col.header.length + 10,
+      }));
+
+      // border semua cell
+      const range = XLSX.utils.decode_range(worksheet["!ref"]);
+
+      for (let R = range.s.r; R <= range.e.r; ++R) {
+        for (let C = range.s.c; C <= range.e.c; ++C) {
+          const cellAddress = XLSX.utils.encode_cell({
+            r: R,
+            c: C,
+          });
+
+          if (!worksheet[cellAddress]) continue;
+
+          worksheet[cellAddress].s = {
+            border: {
+              top: {
+                style: "thin",
+                color: { rgb: "000000" },
+              },
+              bottom: {
+                style: "thin",
+                color: { rgb: "000000" },
+              },
+              left: {
+                style: "thin",
+                color: { rgb: "000000" },
+              },
+              right: {
+                style: "thin",
+                color: { rgb: "000000" },
+              },
+            },
+          };
+
+          // header bold
+          if (R === 0) {
+            worksheet[cellAddress].s.font = {
+              bold: true,
+            };
+          }
+        }
+      }
+
+      // workbook
+      const workbook = XLSX.utils.book_new();
+
+      XLSX.utils.book_append_sheet(
+        workbook,
+        worksheet,
+        "Data recon"
+      );
+
+      // generate excel
+      const excelBuffer = XLSX.write(workbook, {
+        bookType: "xlsx",
+        type: "array",
+      });
+
+      const fileData = new Blob([excelBuffer], {
+        type:
+          "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;charset=UTF-8",
+      });
+
+      saveAs(
+        fileData,
+        `DATA_SO_${this.formatDate(new Date())}.xlsx`
+      );
+
+      this.$toast.add({
+        severity: "success",
+        summary: "Berhasil",
+        detail: "Excel berhasil di export",
+        life: 3000,
+      });
+    },
     initFilters() {
       this.filters = {
         global: { value: null, matchMode: FilterMatchMode.CONTAINS },
